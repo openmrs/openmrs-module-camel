@@ -119,7 +119,7 @@ public class PatientSummaryIntegrationTest extends BaseModuleContextSensitiveTes
 			camelContext.stop();
 		}
 	}
-
+	
 	@Test
 	public void testRoute() {
 		// 1. Publish messages with personId to jms

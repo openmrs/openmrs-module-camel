@@ -166,21 +166,33 @@
 			to 'provided' scope so they are not packaged in the module's lib folder 
 			-->
 			<dependency>
+				<groupId>org.eclipse.jetty.toolchain</groupId>
+				<artifactId>jetty-servlet-api</artifactId>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
 				<groupId>javax.servlet</groupId>
 				<artifactId>javax.servlet-api</artifactId>
-				<version>4.0.1</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>javax.annotation</groupId>
+				<artifactId>javax.annotation</artifactId>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-api</artifactId>
-				<version>1.7.30</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.google.code.findbugs</groupId>
+				<artifactId>jsr305</artifactId>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>javax.servlet</groupId>
 				<artifactId>servlet-api</artifactId>
-				<version>2.5</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
@@ -196,6 +208,11 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>jakarta.activation</groupId>
+				<artifactId>jakarta.activation</artifactId>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
