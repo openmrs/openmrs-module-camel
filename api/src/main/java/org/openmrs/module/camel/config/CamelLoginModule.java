@@ -16,6 +16,8 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.Principal;
 import java.util.Map;
 
@@ -53,8 +55,13 @@ public class CamelLoginModule implements LoginModule {
 			char[] pass = ((PasswordCallback) callbacks[1]).getPassword();
 			String password = pass == null ? "" : new String(pass);
 			
-			if (expectedUsername != null && expectedUsername.equals(user) && expectedPassword != null
-			        && expectedPassword.equals(password)) {
+			// Evaluate both comparisons before branching so a wrong username does not skip the
+			// password compare, which would leak the configured username through response timing.
+			boolean userOk = expectedUsername != null && user != null && MessageDigest
+			        .isEqual(expectedUsername.getBytes(StandardCharsets.UTF_8), user.getBytes(StandardCharsets.UTF_8));
+			boolean passOk = expectedPassword != null && MessageDigest
+			        .isEqual(expectedPassword.getBytes(StandardCharsets.UTF_8), password.getBytes(StandardCharsets.UTF_8));
+			if (userOk && passOk) {
 				authenticated = true;
 				return true;
 			}

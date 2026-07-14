@@ -20,11 +20,12 @@ import org.eclipse.jetty.ee10.webapp.WebAppClassLoader;
 import org.eclipse.jetty.ee10.webapp.WebAppContext;
 import org.elasticsearch.client.RestClient;
 import org.hibernate.SessionFactory;
+import org.hibernate.search.backend.elasticsearch.ElasticsearchBackend;
 import org.hibernate.search.mapper.orm.Search;
 import org.openmrs.util.OpenmrsUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -65,8 +66,16 @@ public class CamelConfig {
 	}
 	
 	@Bean("jms")
-	public JmsComponent jms(@Autowired(required = false) ConnectionFactory connectionFactory) {
+	public JmsComponent jms(ObjectProvider<ConnectionFactory> connectionFactories) {
+		// getIfUnique returns the sole candidate, or the @Primary one among several, and null
+		// otherwise. A plain single-valued injection point would fail context refresh with
+		// NoUniqueBeanDefinitionException when a broker module exposes two factories without
+		// marking one @Primary, taking the whole server down with it.
+		ConnectionFactory connectionFactory = connectionFactories.getIfUnique();
 		if (connectionFactory == null) {
+			if (connectionFactories.stream().count() > 0) {
+				log.warn("Multiple ConnectionFactory beans found and none is @Primary; jms component disabled");
+			}
 			return null;
 		}
 		
@@ -77,16 +86,15 @@ public class CamelConfig {
 	
 	@Bean("elasticsearch")
 	public ElasticsearchComponent elasticsearch(SessionFactory sessionFactory) {
-		// Extract the low-level Elasticsearch RestClient from the Hibernate Search backend safely
 		try {
-			RestClient restClient = Search.mapping(sessionFactory).backend().unwrap(RestClient.class);
-			
+			ElasticsearchBackend esBackend = Search.mapping(sessionFactory).backend().unwrap(ElasticsearchBackend.class);
+			RestClient restClient = esBackend.client(RestClient.class);
 			ElasticsearchComponent elasticsearchComponent = new ElasticsearchComponent();
 			elasticsearchComponent.setClient(restClient);
 			return elasticsearchComponent;
 		}
 		catch (Exception e) {
-			// Backend is not Elasticsearch (e.g., Lucene) or not initialized
+			log.warn("Elasticsearch backend not available, camel-elasticsearch component disabled: {}", e.getMessage());
 			return null;
 		}
 	}
@@ -149,14 +157,11 @@ public class CamelConfig {
 		}
 		
 		File consoleWar = new File(webDirFile, "hawtio.war");
-		if (!consoleWar.exists()) {
-			try (InputStream is = getClass().getResourceAsStream("/hawtio.war")) {
-				if (is != null) {
-					Files.copy(is, consoleWar.toPath(), StandardCopyOption.REPLACE_EXISTING);
-				} else {
-					log.warn(
-					    "hawtio.war not found in classpath. Hawtio Web Console may fail to start or return a 404 error.");
-				}
+		try (InputStream is = getClass().getResourceAsStream("/hawtio.war")) {
+			if (is != null) {
+				Files.copy(is, consoleWar.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			} else {
+				log.warn("hawtio.war not found in classpath. Hawtio Web Console may fail to start or return a 404 error.");
 			}
 		}
 		
